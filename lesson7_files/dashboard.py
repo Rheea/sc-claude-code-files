@@ -402,15 +402,21 @@ def main():
         if 2023 in available_years:
             default_year_index = available_years.index(2023)
         
+        # Ensure available_years is properly formatted
+        year_options = [str(year) for year in available_years]
+        
         selected_year = st.selectbox(
-            "Year",
-            options=available_years,
+            "Year", 
+            options=year_options,
             index=default_year_index,
             key="year_filter"
         )
         
-        # Display selected year
-        st.write(f"**Selected:** {selected_year}")
+        # Convert back to int for processing
+        selected_year = int(selected_year)
+        
+        # Show selected value below selectbox
+        st.write(f"📅 **{selected_year}**")
     
     with col3:
         # Get available months for selected year
@@ -427,16 +433,18 @@ def main():
             key="month_filter"
         )
         
+        # Show selected value below selectbox
+        if selected_month_display == 'All Months':
+            st.write(f"📅 **All Months**")
+        else:
+            month_name = selected_month_display.split(' - ')[1]
+            st.write(f"📅 **{month_name}**")
+        
         # Convert display to actual month number
         if selected_month_display == 'All Months':
             selected_month = None
-            # Display selected period
-            st.write(f"**Selected:** All Months")
         else:
             selected_month = int(selected_month_display.split(' - ')[0])
-            month_name = selected_month_display.split(' - ')[1]
-            # Display selected month
-            st.write(f"**Selected:** {month_name}")
     
     # Create datasets based on selected year and month
     current_data = loader.create_sales_dataset(
