@@ -283,18 +283,20 @@ def plot_custom_metric(self, data):
 ## Dashboard Features
 
 ### Layout Structure
-- **Header**: Title with year selection filter (applies globally)
-- **KPI Row**: 4 metric cards with trend indicators
+- **Header**: Title (left) + Date Range Filter (right, applies globally)
+  - Clean title: "E-commerce Analytics Dashboard" 
+  - Date range filter with year selection showing "YYYY (Jan 1 - Dec 31)"
+- **KPI Row**: 4 metric cards with uniform heights and trend indicators
   - Total Revenue, Monthly Growth, Average Order Value, Total Orders
-  - Color-coded trends (green for positive, red for negative)
-- **Charts Grid**: 2x2 interactive visualization layout
-  - Revenue trend (current vs previous year)
-  - Top 10 product categories bar chart
-  - US state choropleth map
-  - Customer satisfaction vs delivery time analysis
-- **Bottom Row**: Customer experience metrics
-  - Average delivery time with trend
-  - Review score with star rating
+  - Trend arrows with two decimal places (green for positive ↗, red for negative ↘)
+- **Charts Grid**: 2x2 interactive visualization layout with Plotly
+  - Revenue trend line chart: solid line (current), dashed line (previous), grid lines, Y-axis as $300K format
+  - Top 10 categories horizontal bar chart: descending order, blue gradient, values as $300K/$2M format
+  - US state choropleth map: blue gradient color-coded by revenue
+  - Customer satisfaction vs delivery time bar chart: delivery buckets (1-3 days, 4-7 days, 8+ days) vs avg review score
+- **Bottom Row**: 2 customer experience cards with uniform heights
+  - Average delivery time with trend indicator
+  - Review score: large number with star display, "Average Review Score" subtitle
 
 ### Technical Features
 - **Real-time Filtering**: All visualizations update automatically

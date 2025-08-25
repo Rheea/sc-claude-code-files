@@ -5,16 +5,11 @@ A professional Streamlit dashboard for business performance analysis
 
 import streamlit as st
 import pandas as pd
-import numpy as np
-import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from datetime import datetime, timedelta
 import warnings
 
 # Import custom modules
-from data_loader import EcommerceDataLoader, load_and_process_data
-from business_metrics import BusinessMetricsCalculator
+from data_loader import load_and_process_data
 
 warnings.filterwarnings('ignore')
 
@@ -119,6 +114,16 @@ def format_currency(value):
         return f"${value:.0f}"
 
 
+def format_currency_axis(value):
+    """Format currency values for axis labels"""
+    if abs(value) >= 1e6:
+        return f"${value/1e6:.0f}M"
+    elif abs(value) >= 1e3:
+        return f"${value/1e3:.0f}K"
+    else:
+        return f"${value:.0f}"
+
+
 def format_trend(current, previous):
     """Format trend indicators with arrows and colors"""
     if previous == 0:
@@ -186,15 +191,46 @@ def create_revenue_trend_chart(current_data, previous_data, current_year, previo
             yaxis_title="Revenue"
         )
     
+    # Custom y-axis formatting with callback
+    max_value = max(current_data['price'].sum(), previous_data['price'].sum() if previous_data is not None and not previous_data.empty else 0)
+    if max_value > 1e6:
+        dtick = 500000  # 500K intervals for millions
+    elif max_value > 500000:
+        dtick = 200000  # 200K intervals
+    else:
+        dtick = 100000  # 100K intervals
+    
     fig.update_layout(
         showlegend=True,
         hovermode='x unified',
         plot_bgcolor='white',
         xaxis=dict(showgrid=True, gridcolor='#f0f0f0'),
-        yaxis=dict(showgrid=True, gridcolor='#f0f0f0', tickformat='$,.0f'),
+        yaxis=dict(
+            showgrid=True, 
+            gridcolor='#f0f0f0',
+            tickmode='linear',
+            tick0=0,
+            dtick=dtick
+        ),
         height=350,
         margin=dict(t=50, b=50, l=50, r=50)
     )
+    
+    # Custom formatting for y-axis tick labels
+    def format_yticks(fig):
+        if fig.data:
+            y_values = []
+            for trace in fig.data:
+                if hasattr(trace, 'y') and trace.y is not None:
+                    y_values.extend(trace.y)
+            if y_values:
+                max_y = max(y_values)
+                tick_vals = list(range(0, int(max_y * 1.1), dtick))
+                tick_text = [format_currency_axis(val) for val in tick_vals]
+                fig.update_yaxes(tickvals=tick_vals, ticktext=tick_text)
+        return fig
+    
+    fig = format_yticks(fig)
     
     return fig
 
@@ -230,11 +266,24 @@ def create_category_chart(sales_data):
         xaxis_title="Revenue",
         yaxis_title="",
         plot_bgcolor='white',
-        xaxis=dict(showgrid=True, gridcolor='#f0f0f0', tickformat='$,.0f'),
+        xaxis=dict(showgrid=True, gridcolor='#f0f0f0'),
         yaxis=dict(showgrid=False),
         height=350,
         margin=dict(t=50, b=50, l=150, r=50)
     )
+    
+    # Format x-axis with custom currency formatting
+    max_x = max(category_revenue.values)
+    if max_x > 1e6:
+        dtick = 500000
+    elif max_x > 500000:
+        dtick = 200000
+    else:
+        dtick = 100000
+        
+    tick_vals = list(range(0, int(max_x * 1.1), dtick))
+    tick_text = [format_currency_axis(val) for val in tick_vals]
+    fig.update_xaxes(tickvals=tick_vals, ticktext=tick_text)
     
     return fig
 
@@ -341,37 +390,53 @@ def main():
     col1, col2, col3 = st.columns([2, 1, 1])
     
     with col1:
-        st.title("📊 E-commerce Analytics Dashboard")
+        st.title("E-commerce Analytics Dashboard")
     
     with col2:
         # Get available years from data
         orders_data = processed_data['orders']
         available_years = sorted(orders_data['purchase_year'].unique(), reverse=True)
         
-        # Set default year to 2023 if available, otherwise use the first year
+        # Force default year to 2023 if available, otherwise use the first year
         default_year_index = 0
         if 2023 in available_years:
             default_year_index = available_years.index(2023)
         
         selected_year = st.selectbox(
-            "Select Year",
+            "Year",
             options=available_years,
             index=default_year_index,
             key="year_filter"
         )
+        
+        # Display selected year
+        st.write(f"**Selected:** {selected_year}")
     
     with col3:
-        # Month filter
-        month_options = ['All Months'] + [f'Month {i}' for i in range(1, 13)]
+        # Get available months for selected year
+        year_orders = orders_data[orders_data['purchase_year'] == selected_year]
+        available_months = sorted(year_orders['purchase_month'].dropna().unique())
+        
+        # Create month options - only show months with data
+        month_options = ['All Months'] + [f"{month:02d} - {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month-1]}" for month in available_months]
+        
         selected_month_display = st.selectbox(
-            "Select Month",
+            "Month",
             options=month_options,
             index=0,
             key="month_filter"
         )
         
         # Convert display to actual month number
-        selected_month = None if selected_month_display == 'All Months' else int(selected_month_display.split(' ')[1])
+        if selected_month_display == 'All Months':
+            selected_month = None
+            # Display selected period
+            st.write(f"**Selected:** All Months")
+        else:
+            selected_month = int(selected_month_display.split(' - ')[0])
+            month_name = selected_month_display.split(' - ')[1]
+            # Display selected month
+            st.write(f"**Selected:** {month_name}")
     
     # Create datasets based on selected year and month
     current_data = loader.create_sales_dataset(

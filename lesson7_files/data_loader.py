@@ -182,8 +182,51 @@ class EcommerceDataLoader:
                 sales_data['order_delivered_customer_date'] - 
                 sales_data['order_purchase_timestamp']
             ).dt.days
+            
+            # Add delivery speed category
+            sales_data['delivery_category'] = sales_data['delivery_days'].apply(categorize_delivery_speed)
         
         return sales_data
+    
+    def get_delivered_sales_with_categories(self, year_filter: Optional[int] = None, 
+                                          month_filter: Optional[int] = None) -> pd.DataFrame:
+        """
+        Get delivered sales data with product categories.
+        
+        Args:
+            year_filter (int, optional): Filter by specific year
+            month_filter (int, optional): Filter by specific month
+        
+        Returns:
+            pd.DataFrame: Delivered sales with categories
+        """
+        return self.create_sales_dataset(year_filter=year_filter, 
+                                       month_filter=month_filter, 
+                                       status_filter='delivered')
+    
+    def get_available_years(self) -> list:
+        """
+        Get list of available years in the dataset.
+        
+        Returns:
+            list: Available years sorted
+        """
+        if 'orders' not in self.processed_data:
+            return []
+        
+        return sorted(self.processed_data['orders']['purchase_year'].dropna().unique().tolist())
+    
+    def get_product_categories(self) -> list:
+        """
+        Get list of unique product categories.
+        
+        Returns:
+            list: Product categories sorted alphabetically
+        """
+        if 'products' not in self.raw_data:
+            return []
+        
+        return sorted(self.raw_data['products']['product_category_name'].unique().tolist())
     
     def process_all_data(self) -> Dict[str, pd.DataFrame]:
         """
